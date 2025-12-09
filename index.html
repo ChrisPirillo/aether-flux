@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aether Flux</title>
+    
+    <!-- SEO & Metadata -->
+    <meta name="description" content="Aether Flux is an interactive WebGL fractal explorer. manipulate raymarching shaders, complex geometry, and cosmic colors in real-time to generate mesmerizing, sci-fi visual art directly in your browser.">
+    <meta name="keywords" content="Aether Flux, raymarching, fractal shader, WebGL, interactive art, generative art, sci-fi visualization, cosmic shader, Chris Pirillo, HTML5 canvas, glsl">
+    <meta name="author" content="Chris Pirillo">
+    <link rel="canonical" href="https://pirillo.com/arcade/aether-flux.html">
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://pirillo.com/arcade/aether-flux.html">
+    <meta property="og:title" content="Aether Flux">
+    <meta property="og:description" content="Explore the infinite with Aether Flux. An interactive, real-time WebGL fractal shader experience.">
+    <meta property="og:image" content="https://pirillo.com/arcade/images/aether-flux.png">
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@ChrisPirillo">
+    <meta name="twitter:creator" content="@ChrisPirillo">
+    <meta name="twitter:title" content="Aether Flux">
+    <meta name="twitter:description" content="Explore the infinite with Aether Flux. An interactive, real-time WebGL fractal shader experience.">
+    <meta name="twitter:image" content="https://pirillo.com/arcade/images/aether-flux.png">
+
+    <!-- Resource Hints & Analytics -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com">
+    <link rel="preconnect" href="https://www.googletagmanager.com">
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-1CQ4D3VQ3L"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-1CQ4D3VQ3L');
+    </script>
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Aether Flux",
+      "url": "https://pirillo.com/arcade/aether-flux.html",
+      "description": "An interactive WebGL fractal shader explorer allowing users to manipulate raymarching geometry and colors in real-time.",
+      "genre": "Generative Art",
+      "browserRequirements": "Requires WebGL2 support",
+      "author": {
+        "@type": "Person",
+        "name": "Chris Pirillo",
+        "url": "https://pirillo.com"
+      },
+      "image": "https://pirillo.com/arcade/images/aether-flux.png"
+    }
+    </script>
+
+    <!-- Tailwind CSS (Critical - Blocking as requested) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: #000; color: white; font-family: monospace; }
+        canvas { display: block; width: 100%; height: 100%; }
+        
+        /* Custom scrollbar for settings */
+        .settings-scroll::-webkit-scrollbar { width: 6px; }
+        .settings-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        .settings-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
+        
+        /* Slider styling */
+        input[type=range] {
+            -webkit-appearance: none; width: 100%; background: transparent; margin: 8px 0;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none; height: 14px; width: 14px; border-radius: 50%; background: #fff; cursor: pointer; margin-top: -5px; box-shadow: 0 0 5px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer; background: rgba(255,255,255,0.3); border-radius: 2px;
+        }
+        
+        .glass-panel {
+            background: rgba(10, 10, 10, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-right: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Fade transition for UI */
+        .ui-fade {
+            transition: opacity 0.5s ease-in-out;
+            opacity: 1;
+        }
+        .ui-hidden {
+            opacity: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas Layer -->
+    <canvas id="glCanvas" aria-label="Interactive fractal visualization canvas"></canvas>
+
+    <!-- UI Layer -->
+    <main id="ui-container" class="absolute inset-0 pointer-events-none flex">
+        
+        <!-- Hamburger Button (Wrapped for fading) -->
+        <div id="menu-btn-wrapper" class="ui-fade pointer-events-auto absolute top-4 left-4 z-50">
+            <button id="menu-btn" aria-label="Open Configuration Menu" class="p-2 rounded bg-black/50 hover:bg-white/20 transition-colors text-white">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" role="img" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Sidebar Menu -->
+        <nav id="sidebar" aria-label="Settings Menu" class="pointer-events-auto glass-panel w-80 h-full transform -translate-x-full transition-transform duration-300 ease-in-out flex flex-col z-40">
+            <div class="p-6 pt-20 flex-1 overflow-y-auto settings-scroll">
+                <h1 class="text-xl font-bold mb-6 tracking-wider">CONFIGURATION</h1>
+                
+                <div id="controls-container" class="space-y-6">
+                    <!-- Controls generated by JS -->
+                </div>
+            </div>
+            
+            <div class="p-6 border-t border-white/10 bg-black/20 space-y-4">
+                <button id="export-btn" class="w-full py-3 border border-white/30 text-white font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors rounded">
+                    Export Wallpaper (4K)
+                </button>
+                <button id="reset-btn" class="w-full py-3 border border-white/30 text-white font-bold uppercase tracking-widest hover:bg-white hover:text-black transition-colors rounded">
+                    Reset Defaults
+                </button>
+                <button id="randomize-btn" class="w-full py-3 bg-white text-black font-bold uppercase tracking-widest hover:bg-gray-200 transition-colors rounded">
+                    Randomize
+                </button>
+            </div>
+        </nav>
+    </main>
+
+    <!-- Black Overlay for Transitions -->
+    <div id="transition-overlay" class="absolute inset-0 bg-black pointer-events-none opacity-0 transition-opacity duration-700 z-40" aria-hidden="true"></div>
+
+<script>
+/**
+ * SHADER SOURCE
+ */
+
+const vertexShaderSource = `#version 300 es
+in vec4 position;
+void main() {
+    gl_Position = position;
+}`;
+
+const fragmentShaderSource = `#version 300 es
+precision highp float;
+
+uniform vec2 u_resolution;
+uniform float u_time;
+
+// Configuration Uniforms
+uniform float u_iterations;
+uniform vec3  u_color;
+uniform float u_camZ;
+uniform float u_initOffset;
+uniform float u_mixFreq; 
+uniform float u_innerIter;
+uniform float u_fractScale;
+uniform float u_stepDiv;
+uniform float u_exposure;
+uniform vec3  u_rot;      // Rotation XYZ
+uniform float u_gamma;    // Gamma correction
+uniform float u_pulse;    // Color pulse freq
+
+out vec4 fragColor;
+
+// Rotation Matrix Helpers
+mat2 rot(float a) {
+    float s = sin(a);
+    float c = cos(a);
+    return mat2(c, -s, s, c);
+}
+
+void main() {
+    vec2 r = u_resolution;
+    vec4 o = vec4(0.0);
+    float z = 0.0;
+    float d = 0.0;
+    float h = 0.0;
+    float t = u_time;
+    
+    // Raymarching Loop
+    for(float i = 0.0; i < u_iterations; i++) {
+        // Setup coordinate system
+        vec3 p = z * normalize(vec3((gl_FragCoord.xy * 2.0 - r.xy), -r.y));
+        
+        // Apply Global Rotations
+        p.yz *= rot(u_rot.x);
+        p.xz *= rot(u_rot.y);
+        p.xy *= rot(u_rot.z);
+
+        p.z += u_camZ;
+        
+        vec3 a = vec3(0.0);
+        a += u_initOffset;
+        
+        // Main Fractal Fold
+        h = dot(p, vec3(1.0)) - t * u_pulse; 
+        
+        // Mixing with configurable frequency
+        float mixVal = sin(h * u_mixFreq);
+        vec3 term1 = dot(a, p) * a;
+        vec3 term2 = p;
+        vec3 mixed = mix(term1, term2, mixVal);
+        
+        a = mixed + cos(h) * cross(a, p);
+        
+        // Inner Fractal Loop
+        for(float j = 0.0; j < u_innerIter; j++) {
+            a += u_fractScale * sin(a * j).zxy;
+        }
+        
+        // Distance/Step calculation
+        d = length(a.xz) / u_stepDiv;
+        z += d;
+        
+        // Accumulate Color
+        float blueComp = (h + t) * u_color.z;
+        o += vec4(u_color.x, u_color.y, blueComp, 1.0) / max(d, 0.001);
+    }
+    
+    // Tone mapping & Gamma
+    vec3 col = tanh(o.rgb / u_exposure);
+    col = pow(col, vec3(u_gamma));
+    
+    fragColor = vec4(col, 1.0);
+}`;
+
+// --- APP STATE & CONFIG ---
+
+const config = {
+    // --- Auto Advance ---
+    autoAdvance: { value: 0.0, min: 0.0, max: 60.0, step: 2.0, name: "Auto-Timer (s)", noRandom: true },
+
+    // --- Basic Settings ---
+    iterations: { value: 60, min: 10, max: 120, step: 1, name: "Ray Steps" },
+    speed: { value: 1.0, min: 0.0, max: 5.0, step: 0.1, name: "Speed", noRandom: true },
+    exposure: { value: 10000.0, min: 1000.0, max: 50000.0, step: 100.0, name: "Exposure" },
+    gamma: { value: 1.0, min: 0.5, max: 2.5, step: 0.1, name: "Gamma" },
+    
+    // --- Geometry / Fractal ---
+    camZ: { value: 9.0, min: 1.0, max: 20.0, step: 0.1, name: "Camera Z" },
+    rotX: { value: 0.0, min: -3.14, max: 3.14, step: 0.01, name: "Rotate X" },
+    rotY: { value: 0.0, min: -3.14, max: 3.14, step: 0.01, name: "Rotate Y" },
+    rotZ: { value: 0.0, min: -3.14, max: 3.14, step: 0.01, name: "Rotate Z" },
+    
+    initOffset: { value: 0.5, min: 0.0, max: 2.0, step: 0.01, name: "Geo Offset" },
+    innerIter: { value: 9, min: 1, max: 16, step: 1, name: "Fractal Depth" },
+    fractScale: { value: 0.3, min: 0.05, max: 1.0, step: 0.01, name: "Fractal Scale" },
+    stepDiv: { value: 15.0, min: 5.0, max: 50.0, step: 0.1, name: "Density" },
+    
+    // --- Colors & Patterns ---
+    mixFreq: { value: 1.0, min: 0.1, max: 5.0, step: 0.1, name: "Pattern Freq" },
+    pulse: { value: 1.0, min: 0.1, max: 4.0, step: 0.1, name: "Pulse Speed" },
+    colorR: { value: 9.0, min: 0.0, max: 20.0, step: 0.1, name: "Red Channel" },
+    colorG: { value: 5.0, min: 0.0, max: 20.0, step: 0.1, name: "Green Channel" },
+    colorB: { value: 1.0, min: 0.0, max: 5.0, step: 0.1, name: "Blue Mix" },
+};
+
+// Copy of config to track current interpolated values
+let currentValues = {};
+let defaultValues = {}; // Store defaults before randomization
+let gl;
+let program;
+let startTime = Date.now();
+let uniformLocs = {};
+let isMenuOpen = false;
+let idleTimer;
+let isRandomizing = false; // Flag to stop interpolation during fade
+let autoIntervalId = null; // For auto-advance
+
+// Interpolation strength
+const LERP_FACTOR = 0.05;
+
+function init() {
+    const canvas = document.getElementById('glCanvas');
+    gl = canvas.getContext('webgl2', { preserveDrawingBuffer: true });
+
+    if (!gl) {
+        alert("WebGL2 not supported");
+        return;
+    }
+
+    // Capture default values before any randomization happens
+    for (let key in config) {
+        defaultValues[key] = config[key].value;
+    }
+
+    // Compile Shaders
+    const vs = createShader(gl, gl.VERTEX_SHADER, vertexShaderSource);
+    const fs = createShader(gl, gl.FRAGMENT_SHADER, fragmentShaderSource);
+    program = createProgram(gl, vs, fs);
+
+    // Fullscreen Triangle Buffer
+    const positionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
+    const positions = new Float32Array([
+        -1, -1,
+         3, -1,
+        -1,  3,
+    ]);
+    gl.bufferData(gl.ARRAY_BUFFER, positions, gl.STATIC_DRAW);
+
+    const vao = gl.createVertexArray();
+    gl.bindVertexArray(vao);
+    const positionAttributeLocation = gl.getAttribLocation(program, "position");
+    gl.enableVertexAttribArray(positionAttributeLocation);
+    gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+
+    // Get Uniform Locations
+    uniformLocs = {
+        resolution: gl.getUniformLocation(program, "u_resolution"),
+        time: gl.getUniformLocation(program, "u_time"),
+        
+        iterations: gl.getUniformLocation(program, "u_iterations"),
+        color: gl.getUniformLocation(program, "u_color"),
+        camZ: gl.getUniformLocation(program, "u_camZ"),
+        initOffset: gl.getUniformLocation(program, "u_initOffset"),
+        innerIter: gl.getUniformLocation(program, "u_innerIter"),
+        fractScale: gl.getUniformLocation(program, "u_fractScale"),
+        stepDiv: gl.getUniformLocation(program, "u_stepDiv"),
+        exposure: gl.getUniformLocation(program, "u_exposure"),
+        mixFreq: gl.getUniformLocation(program, "u_mixFreq"),
+        rot: gl.getUniformLocation(program, "u_rot"),
+        gamma: gl.getUniformLocation(program, "u_gamma"),
+        pulse: gl.getUniformLocation(program, "u_pulse"),
+    };
+
+    buildUI();
+    
+    // --- STARTUP RANDOMIZATION ---
+    applyRandomValues(); // Set random config immediately
+    // Sync currentValues to random config so we don't drift from defaults on load
+    for(let key in config) {
+        currentValues[key] = config[key].value;
+    }
+
+    setupEvents();
+    setupIdleTimer();
+    resize();
+    requestAnimationFrame(render);
+}
+
+function createShader(gl, type, source) {
+    const shader = gl.createShader(type);
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.error(gl.getShaderInfoLog(shader));
+        gl.deleteShader(shader);
+        return null;
+    }
+    return shader;
+}
+
+function createProgram(gl, vs, fs) {
+    const program = gl.createProgram();
+    gl.attachShader(program, vs);
+    gl.attachShader(program, fs);
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.error(gl.getProgramInfoLog(program));
+        gl.deleteProgram(program);
+        return null;
+    }
+    return program;
+}
+
+function resize() {
+    const canvas = gl.canvas;
+    const displayWidth = window.innerWidth;
+    const displayHeight = window.innerHeight;
+
+    if (canvas.width !== displayWidth || canvas.height !== displayHeight) {
+        canvas.width = displayWidth;
+        canvas.height = displayHeight;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+}
+
+// Simple Linear Interpolation
+function lerp(start, end, amt) {
+    return (1 - amt) * start + amt * end;
+}
+
+function render() {
+    // 1. Update Interpolation (Only if not in the middle of a cut/snap randomization)
+    if (!isRandomizing) {
+        for (let key in config) {
+            let target = config[key].value;
+            let current = currentValues[key];
+            
+            // Fix: ensure undefined values don't break math
+            if(typeof current === 'undefined') current = target;
+
+            let diff = target - current;
+            if (Math.abs(diff) > 0.0001) {
+                currentValues[key] = lerp(current, target, LERP_FACTOR);
+            } else {
+                currentValues[key] = target;
+            }
+        }
+    }
+
+    // 2. Render
+    const time = (Date.now() - startTime) * 0.001 * currentValues.speed;
+
+    gl.useProgram(program);
+
+    gl.uniform2f(uniformLocs.resolution, gl.canvas.width, gl.canvas.height);
+    gl.uniform1f(uniformLocs.time, time);
+    
+    gl.uniform1f(uniformLocs.iterations, currentValues.iterations);
+    gl.uniform3f(uniformLocs.color, currentValues.colorR, currentValues.colorG, currentValues.colorB);
+    gl.uniform1f(uniformLocs.camZ, currentValues.camZ);
+    gl.uniform1f(uniformLocs.initOffset, currentValues.initOffset);
+    gl.uniform1f(uniformLocs.innerIter, currentValues.innerIter);
+    gl.uniform1f(uniformLocs.fractScale, currentValues.fractScale);
+    gl.uniform1f(uniformLocs.stepDiv, currentValues.stepDiv);
+    gl.uniform1f(uniformLocs.exposure, currentValues.exposure);
+    gl.uniform1f(uniformLocs.mixFreq, currentValues.mixFreq);
+    gl.uniform3f(uniformLocs.rot, currentValues.rotX, currentValues.rotY, currentValues.rotZ);
+    gl.uniform1f(uniformLocs.gamma, currentValues.gamma);
+    gl.uniform1f(uniformLocs.pulse, currentValues.pulse);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    requestAnimationFrame(render);
+}
+
+// --- UI GENERATION & EVENTS ---
+
+function buildUI() {
+    const container = document.getElementById('controls-container');
+    container.innerHTML = '';
+
+    for (const key in config) {
+        const item = config[key];
+        const wrapper = document.createElement('div');
+        
+        const labelRow = document.createElement('div');
+        labelRow.className = "flex justify-between text-sm mb-1";
+        
+        const label = document.createElement('label');
+        label.textContent = item.name;
+        label.className = "font-semibold text-gray-300";
+        label.htmlFor = `input-${key}`; // Accessibility linkage
+        
+        const valSpan = document.createElement('span');
+        valSpan.id = `val-${key}`;
+        valSpan.textContent = item.value.toFixed(item.step < 1 ? 2 : 0);
+        valSpan.className = "text-blue-400 font-mono";
+
+        labelRow.appendChild(label);
+        labelRow.appendChild(valSpan);
+
+        const input = document.createElement('input');
+        input.type = "range";
+        input.min = item.min;
+        input.max = item.max;
+        input.step = item.step;
+        input.value = item.value;
+        input.id = `input-${key}`;
+        input.setAttribute('aria-label', `Adjust ${item.name}`); // Accessibility
+        
+        input.addEventListener('input', (e) => {
+            const v = parseFloat(e.target.value);
+            config[key].value = v;
+            document.getElementById(`val-${key}`).textContent = v.toFixed(item.step < 1 ? 2 : 0);
+            
+            // Handle Auto-Advance Logic Specifics
+            if (key === 'autoAdvance') {
+                updateAutoTimer();
+            }
+        });
+
+        wrapper.appendChild(labelRow);
+        wrapper.appendChild(input);
+        container.appendChild(wrapper);
+    }
+}
+
+function updateAutoTimer() {
+    if (autoIntervalId) clearInterval(autoIntervalId);
+    
+    const seconds = config.autoAdvance.value;
+    const ms = seconds * 1000;
+    
+    if (seconds > 0) {
+        autoIntervalId = setInterval(() => {
+            if (!isRandomizing) {
+                randomize();
+            }
+        }, ms);
+    }
+}
+
+function resetToDefaults() {
+    const overlay = document.getElementById('transition-overlay');
+    
+    // 1. Fade Out
+    overlay.style.opacity = '1';
+    isRandomizing = true;
+
+    // 2. Wait for Fade, then Reset Values, then Fade In
+    setTimeout(() => {
+        // Restore defaults
+        for (const key in config) {
+            config[key].value = defaultValues[key];
+        }
+        
+        // Update DOM inputs to match new defaults
+        for (const key in config) {
+            const input = document.getElementById(`input-${key}`);
+            const valSpan = document.getElementById(`val-${key}`);
+            if(input) input.value = config[key].value;
+            if(valSpan) valSpan.textContent = config[key].value.toFixed(config[key].step < 1 ? 2 : 0);
+        }
+
+        // Snap currentValues immediately so we don't interpolate from the old random state
+        for(let key in config) {
+            currentValues[key] = config[key].value;
+        }
+        
+        // 3. Fade In
+        overlay.style.opacity = '0';
+        
+        // 4. Resume normal operation after fade in completes
+        setTimeout(() => {
+            isRandomizing = false;
+        }, 700);
+    }, 700);
+}
+
+function randomize() {
+    const overlay = document.getElementById('transition-overlay');
+    
+    // 1. Fade Out
+    overlay.style.opacity = '1';
+    isRandomizing = true;
+
+    // 2. Wait for Fade, then Swap Values, then Fade In
+    setTimeout(() => {
+        applyRandomValues();
+        // Snap currentValues immediately to target so there is no morphing behind the black screen
+        for(let key in config) {
+            currentValues[key] = config[key].value;
+        }
+        
+        // 3. Fade In
+        overlay.style.opacity = '0';
+        
+        // 4. Resume normal operation after fade in completes
+        setTimeout(() => {
+            isRandomizing = false;
+        }, 700);
+    }, 700); // Wait for fade out (matches CSS duration)
+}
+
+function applyRandomValues() {
+    for (const key in config) {
+        const item = config[key];
+        
+        if (item.noRandom) continue;
+
+        let rand = Math.random() * (item.max - item.min) + item.min;
+        
+        // --- SAFEGUARDS TO PREVENT BLACK SCREENS ---
+
+        // Exposure: Cap strict upper limit. High exposure = Darker image in this tanh formula.
+        // Original range is up to 50000. Let's limit random to 25000.
+        if(key === 'exposure') rand = Math.min(rand, 25000); 
+
+        // Iterations: Needs minimum to show structure
+        if(key === 'iterations') rand = Math.max(40, rand);
+
+        // Fractal Scale: Too low/high disappears. Keep it in the "juicy" middle.
+        if(key === 'fractScale') rand = 0.2 + Math.random() * 0.5;
+
+        // Density: Extreme values cause artifacts or blackness
+        if(key === 'stepDiv') rand = 10 + Math.random() * 20;
+
+        // Rotation: Bias towards 0 for better default framing
+        if(key.startsWith('rot')) rand = (Math.random() - 0.5) * 3.0;
+        
+        // Round to step
+        if (item.step >= 1) rand = Math.round(rand);
+        else rand = Math.round(rand * 100) / 100;
+        
+        config[key].value = rand;
+    }
+
+    // --- COLOR SAFETY CHECK ---
+    // If all colors are too low, boost Red or Green
+    const totalColor = config.colorR.value + config.colorG.value + config.colorB.value;
+    if (totalColor < 8.0) {
+        if (Math.random() > 0.5) config.colorR.value = 10.0 + Math.random() * 5.0;
+        else config.colorG.value = 10.0 + Math.random() * 5.0;
+    }
+
+    // Update DOM inputs
+    for (const key in config) {
+        const input = document.getElementById(`input-${key}`);
+        const valSpan = document.getElementById(`val-${key}`);
+        if(input) input.value = config[key].value;
+        if(valSpan) valSpan.textContent = config[key].value.toFixed(config[key].step < 1 ? 2 : 0);
+    }
+}
+
+function exportWallpaper() {
+    const width = 3840;
+    const height = 2160;
+    const canvas = document.getElementById('glCanvas');
+
+    // Store original size
+    const origWidth = canvas.width;
+    const origHeight = canvas.height;
+
+    // Resize
+    canvas.width = width;
+    canvas.height = height;
+    gl.viewport(0, 0, width, height);
+
+    // Force one render frame at high resolution using current state
+    const time = (Date.now() - startTime) * 0.001 * currentValues.speed;
+    gl.useProgram(program);
+    gl.uniform2f(uniformLocs.resolution, width, height);
+    gl.uniform1f(uniformLocs.time, time);
+    gl.uniform1f(uniformLocs.iterations, currentValues.iterations);
+    gl.uniform3f(uniformLocs.color, currentValues.colorR, currentValues.colorG, currentValues.colorB);
+    gl.uniform1f(uniformLocs.camZ, currentValues.camZ);
+    gl.uniform1f(uniformLocs.initOffset, currentValues.initOffset);
+    gl.uniform1f(uniformLocs.innerIter, currentValues.innerIter);
+    gl.uniform1f(uniformLocs.fractScale, currentValues.fractScale);
+    gl.uniform1f(uniformLocs.stepDiv, currentValues.stepDiv);
+    gl.uniform1f(uniformLocs.exposure, currentValues.exposure);
+    gl.uniform1f(uniformLocs.mixFreq, currentValues.mixFreq);
+    gl.uniform3f(uniformLocs.rot, currentValues.rotX, currentValues.rotY, currentValues.rotZ);
+    gl.uniform1f(uniformLocs.gamma, currentValues.gamma);
+    gl.uniform1f(uniformLocs.pulse, currentValues.pulse);
+
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+
+    // Capture
+    const dataURL = canvas.toDataURL('image/png');
+    
+    // Restore
+    canvas.width = origWidth;
+    canvas.height = origHeight;
+    gl.viewport(0, 0, origWidth, origHeight);
+    
+    // Trigger download
+    const link = document.createElement('a');
+    link.download = 'aether-flux-wallpaper.png';
+    link.href = dataURL;
+    link.click();
+}
+
+function setupEvents() {
+    const sidebar = document.getElementById('sidebar');
+    const menuBtn = document.getElementById('menu-btn');
+    const canvas = document.getElementById('glCanvas');
+
+    function closeMenu() {
+        isMenuOpen = false;
+        sidebar.classList.add('-translate-x-full');
+    }
+
+    // Toggle Menu
+    menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation(); 
+        isMenuOpen = !isMenuOpen;
+        if (isMenuOpen) {
+            sidebar.classList.remove('-translate-x-full');
+            document.getElementById('menu-btn-wrapper').classList.remove('ui-hidden');
+        } else {
+            closeMenu();
+        }
+    });
+
+    // Randomize Button
+    document.getElementById('randomize-btn').addEventListener('click', randomize);
+
+    // Export Button
+    document.getElementById('export-btn').addEventListener('click', exportWallpaper);
+
+    // Reset Defaults Button
+    document.getElementById('reset-btn').addEventListener('click', resetToDefaults);
+
+    // Canvas Click -> Randomize
+    canvas.addEventListener('mousedown', (e) => {
+        if (!isMenuOpen) {
+            randomize();
+        } else {
+            closeMenu();
+        }
+    });
+
+    // Escape Key to Close Menu
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && isMenuOpen) {
+            closeMenu();
+        }
+    });
+
+    window.addEventListener('resize', resize);
+}
+
+function setupIdleTimer() {
+    const menuWrapper = document.getElementById('menu-btn-wrapper');
+    const sidebar = document.getElementById('sidebar');
+
+    function resetTimer() {
+        // Always show on movement
+        menuWrapper.classList.remove('ui-hidden');
+        
+        clearTimeout(idleTimer);
+
+        // Only hide if menu is closed
+        if (!isMenuOpen) {
+            idleTimer = setTimeout(() => {
+                menuWrapper.classList.add('ui-hidden');
+            }, 2500); // Disappear after 2.5 seconds of inactivity
+        }
+    }
+
+    // Reset timer on any mouse movement or click
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('mousedown', resetTimer);
+    
+    // Initialize
+    resetTimer();
+}
+
+window.onload = init;
+
+</script>
+</body>
+</html>
